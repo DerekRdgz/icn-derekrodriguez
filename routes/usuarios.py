@@ -30,6 +30,9 @@ def create_account():
     username = getData.get('username')
     email = getData.get('email')
     password = getData.get('password')
+    
+    #ultimo agregado
+    nombre = getData.get('nombre') or ""
 
     # Validaciones básicas
     if not username or not email or not password:
@@ -46,6 +49,9 @@ def create_account():
         'username': username,
         'email': email,
         'password': hashed_password,
+        'nombre':nombre,
+        'biografia': '',
+        'avatar_url': ''
     }
     try:
         current_app.db.usuarios.insert_one(new_user)
@@ -64,6 +70,7 @@ def login():
     if not email or not password:
         return jsonify({'error': 'Faltan datos obligatorios'}), 400
     usuario = current_app.db.usuarios.find_one({'email': email})
+    
     if not usuario:
         return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
 
@@ -90,6 +97,9 @@ def get_usuario(username):
     user_posts = list(current_app.db.posts.find({'username': username}))
     for post in user_posts:
         post['_id'] = str(post['_id'])  # Convertir ObjectId a string
+    usuario['stats']={
+        'posts' :len(user_posts)
+    }
     return jsonify({'usuario': usuario, 'posts': user_posts}), 200
 
 # Quien soy
@@ -100,6 +110,16 @@ def who_am_i():
     usuario = current_app.db.usuarios.find_one({'username': current_user}, {'password': 0})
     if not usuario:
         return jsonify({'error': 'Usuario no encontrado'}), 404
+
+@usuarios_bp.route('/me', methods=['GET'])
+@jwt_required()
+def who_am_i():
+    current_user = get_jwt_identity()
+    usuario = current_app.db.usuarios.find_one({'username': current_user}, {'password': 0})
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    usuario['_id']=str (usuario['_id'])
+    return jsonify({'usuario': usuario}), 200
 
 # Borrar usuario y sus posts
 @usuarios_bp.route('/<username>', methods=['DELETE'])
@@ -116,3 +136,32 @@ def delete_user(username):
     current_app.db.posts.delete_many({'username': username})
     current_app.db.usuarios.delete_one({'username': username})
     return jsonify({'message': 'Usuario y sus posts eliminados exitosamente'}), 200
+
+# Actualizar información del usuario
+@usuarios_bp.route('/<username>', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    current_user=get_jwt_identity()
+    data=request.get_json()
+    
+    uptadte_fields={}
+    if 'nombre' in data:
+        uptadte_fields['nombre']=data['nombre']
+    if 'biografia' in data:
+        uptadte_fields['biografia']=data['biografia']
+    if 'avatar_url' in data:
+        uptadte_fields['avatar_url']=data['avatar_url']
+    if not uptadte_fields:
+        return jsonify({'error':'No hay campos para actualizar'}),400
+    
+    try:
+        result=current_app.db.usuarios.update_one(
+            {'username':current_user},
+            {'$set':uptadte_fields}
+        )
+        if result.matched_count==0:
+            return jsonify({'error':'Usuario no encontrado'}),404
+        updated_user=['_id']=str(uptadte_fields['_id'])
+        return jsonify({'message': 'Perfil actualizado exitosamente', 'usuario': updated_user}), 200
+    except Exception as e:
+        return jsonify({'error':f'Error al actualizar el perfil: {str(e)}'}),500
