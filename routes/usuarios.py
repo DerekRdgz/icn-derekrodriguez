@@ -99,18 +99,16 @@ def get_usuario(username):
         post['_id'] = str(post['_id'])  # Convertir ObjectId a string
     usuario['stats']={
         'posts' :len(user_posts)
+        # Aquí puedes añadir los 'followers' y 'following' cuando los implementes
     }
     return jsonify({'usuario': usuario, 'posts': user_posts}), 200
 
-# Quien soy
-@usuarios_bp.route('/me', methods=['GET'])
-@jwt_required()
-def who_am_i():
-    current_user = get_jwt_identity()
-    usuario = current_app.db.usuarios.find_one({'username': current_user}, {'password': 0})
-    if not usuario:
-        return jsonify({'error': 'Usuario no encontrado'}), 404
 
+# --- ERROR 1 CORREGIDO ---
+# Borré la función 'who_am_i' duplicada que estaba aquí (líneas 126-132 del archivo original)
+
+
+# Quien soy
 @usuarios_bp.route('/me', methods=['GET'])
 @jwt_required()
 def who_am_i():
@@ -137,31 +135,45 @@ def delete_user(username):
     current_app.db.usuarios.delete_one({'username': username})
     return jsonify({'message': 'Usuario y sus posts eliminados exitosamente'}), 200
 
+# --- ERROR 2 y 3 CORREGIDOS ---
+# Cambié la ruta de '/<username>' a '/me/update'
+# Cambié el método de 'PUT' a 'PATCH'
+# Corregí el typo 'uptadte_fields' a 'update_fields'
+#
 # Actualizar información del usuario
-@usuarios_bp.route('/<username>', methods=['PUT'])
+@usuarios_bp.route('/me/update', methods=['PATCH']) 
 @jwt_required()
 def update_profile():
     current_user=get_jwt_identity()
     data=request.get_json()
     
-    uptadte_fields={}
+    update_fields={} # Corregido (antes 'uptadte_fields')
+    
     if 'nombre' in data:
-        uptadte_fields['nombre']=data['nombre']
+        update_fields['nombre']=data['nombre'] # Corregido
     if 'biografia' in data:
-        uptadte_fields['biografia']=data['biografia']
+        update_fields['biografia']=data['biografia'] # Corregido
     if 'avatar_url' in data:
-        uptadte_fields['avatar_url']=data['avatar_url']
-    if not uptadte_fields:
+        update_fields['avatar_url']=data['avatar_url'] # Corregido
+        
+    if not update_fields: # Corregido
         return jsonify({'error':'No hay campos para actualizar'}),400
     
     try:
         result=current_app.db.usuarios.update_one(
             {'username':current_user},
-            {'$set':uptadte_fields}
+            {'$set':update_fields} # Corregido
         )
         if result.matched_count==0:
             return jsonify({'error':'Usuario no encontrado'}),404
-        updated_user=['_id']=str(uptadte_fields['_id'])
+        
+        updated_user = current_app.db.usuarios.find_one(
+            {'username': current_user}, 
+            {'password': 0}
+        )
+
+        updated_user['_id'] = str(updated_user['_id']) 
+
         return jsonify({'message': 'Perfil actualizado exitosamente', 'usuario': updated_user}), 200
     except Exception as e:
-        return jsonify({'error':f'Error al actualizar el perfil: {str(e)}'}),500
+        return jsonify({'error': f"Error al actualizar perfil: {str(e)}"}), 500
