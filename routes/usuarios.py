@@ -28,7 +28,7 @@ def create_account():
     # Obtener datos del request
     getData = request.get_json()
     username = getData.get('username')
-    email = getData.get('email')
+    email = getData.get('email').lower()
     password = getData.get('password')
     
     #ultimo agregado
@@ -66,7 +66,7 @@ def create_account():
 def login():
     getData = request.get_json()
     
-    email = getData.get('email')
+    email = getData.get('email').lower()
     password = getData.get('password')
 
     if not email or not password:
