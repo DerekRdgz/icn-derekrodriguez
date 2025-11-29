@@ -179,14 +179,14 @@ def update_profile():
 
     try:
         result = current_app.db.usuarios.update_one(
-            {'username': current_user},
+            {'_id': current_user},
             {'$set': update_fields}  # Corregido
         )
         if result.matched_count == 0:
             return jsonify({'error': 'Usuario no encontrado'}), 404
 
         updated_user = current_app.db.usuarios.find_one(
-            {'username': current_user},
+            {'_id': current_user},
             {'password': 0}
         )
 
