@@ -93,7 +93,7 @@ def login():
         additional_claims={"_id": usuario['_id']},
         expires_delta=expires
     )
-    return jsonify({'message': 'Login exitoso', 'usuario': usuario, 'access_token': access_token}), 200
+    return jsonify({'message': 'Este es un mensaje de prueba', 'usuario': usuario, 'access_token': access_token}), 200
 
 # Obtener un usuario por su username
 
